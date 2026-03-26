@@ -4,12 +4,21 @@ from app.models import user
 from app.routes import auth
 from app.core.deps import get_current_user
 from app.routes import task
+from fastapi.middleware.cors import CORSMiddleware
 
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-app.include_router(task.router, prefix="/api/v1", tags=["Tasks"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # allow all for now
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(task.router, prefix="/api/v1/tasks", tags=["Tasks"])
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Auth"])
 
 # @app.get("/")
