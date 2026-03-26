@@ -9,12 +9,13 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-app.include_router(auth.router, prefix="/auth", tags=["Auth"])
-app.include_router(task.router, prefix="/api", tags=["Task"])
+app.include_router(task.router, prefix="/api/v1", tags=["Tasks"])
+app.include_router(auth.router, prefix="/api/v1/auth", tags=["Auth"])
 
 # @app.get("/")
 # def home():
 #     return {"message": "API is working"}
+
 
 @app.get("/protected")
 def protected(user=Depends(get_current_user)):
