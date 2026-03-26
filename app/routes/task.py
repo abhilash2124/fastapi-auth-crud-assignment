@@ -4,8 +4,10 @@ from app.database import SessionLocal
 from app.models.task import Task
 from app.schemas.task import TaskCreate
 from app.core.deps import get_current_user
+from fastapi import HTTPException
 
 router = APIRouter()
+
 
 def get_db():
     db = SessionLocal()
@@ -14,14 +16,13 @@ def get_db():
     finally:
         db.close()
 
+
 @router.post("/tasks")
-def create_task(task: TaskCreate, db: Session = Depends(get_db), user=Depends(get_current_user)):
-    
-    new_task = Task(
-        title=task.title,
-        description=task.description,
-        owner=user["sub"]
-    )
+def create_task(
+    task: TaskCreate, db: Session = Depends(get_db), user=Depends(get_current_user)
+):
+
+    new_task = Task(title=task.title, description=task.description, owner=user["sub"])
 
     db.add(new_task)
     db.commit()
@@ -30,22 +31,25 @@ def create_task(task: TaskCreate, db: Session = Depends(get_db), user=Depends(ge
     return new_task
 
 
-
-
-
-
-
 @router.get("/tasks")
 def get_tasks(db: Session = Depends(get_db), user=Depends(get_current_user)):
-    
+
     tasks = db.query(Task).filter(Task.owner == user["sub"]).all()
-    
+
     return tasks
 
-@router.put("/tasks/{task_id}")
-def update_task(task_id: int, task: TaskCreate, db: Session = Depends(get_db), user=Depends(get_current_user)):
 
-    db_task = db.query(Task).filter(Task.id == task_id, Task.owner == user["sub"]).first()
+@router.put("/tasks/{task_id}")
+def update_task(
+    task_id: int,
+    task: TaskCreate,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+
+    db_task = (
+        db.query(Task).filter(Task.id == task_id, Task.owner == user["sub"]).first()
+    )
 
     if not db_task:
         return {"error": "Task not found"}
@@ -58,13 +62,19 @@ def update_task(task_id: int, task: TaskCreate, db: Session = Depends(get_db), u
 
     return db_task
 
-@router.delete("/tasks/{task_id}")
-def delete_task(task_id: int, db: Session = Depends(get_db), user=Depends(get_current_user)):
 
-    db_task = db.query(Task).filter(Task.id == task_id, Task.owner == user["sub"]).first()
+@router.delete("/tasks/{task_id}")
+def delete_task(
+    task_id: int, db: Session = Depends(get_db), user=Depends(get_current_user)
+):
+
+    db_task = db.query(Task).filter(Task.id == task_id).first()
 
     if not db_task:
-        return {"error": "Task not found"}
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    if user["sub"] != db_task.owner and user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
 
     db.delete(db_task)
     db.commit()
